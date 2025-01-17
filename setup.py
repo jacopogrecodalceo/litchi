@@ -3,10 +3,10 @@ from setuptools import setup, find_packages
 setup(
     name='litchi',
     version='0.1.1',
-    description='A brief description of your library',
+    description='a lilypond / csound parser',
     author="jacopo greco d'alceo",
-    author_email='your_email@example.com',
-    url='https://github.com/your_username/litchi',
+    author_email='jacopo.grecodalceo@gmail.com',
+    url='https://github.com/jacopogrecodalceo/litchi.git',
     packages=find_packages(),
     install_requires=[
         'abjad==3.19',
