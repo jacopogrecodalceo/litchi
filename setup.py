@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='litchi',
-    version='0.1.0',
+    version='0.1.1',
     description='A brief description of your library',
     author="jacopo greco d'alceo",
     author_email='your_email@example.com',
