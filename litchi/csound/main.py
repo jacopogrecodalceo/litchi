@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
-from .score.builder import CsoundScoreBuilder
-from .player import CsoundPlayer
+from score.builder import CsoundScoreBuilder
+from player import CsoundPlayer
 
 logging.basicConfig(level=logging.INFO)
 
