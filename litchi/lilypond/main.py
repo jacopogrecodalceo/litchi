@@ -17,8 +17,9 @@ class LitchiLilyPond:
 		d = quickly.load(self.file_path)
 		self.scope = Scope(d)
 		self.tree = d.get_transform(True)
-		with open(log_path, 'w') as f:
-			self.tree.dump(file=f)
+		if log_path:
+			with open(log_path, 'w') as f:
+				self.tree.dump(file=f)
 		self.replace_includes()
 
 	def replace_includes(self):

@@ -2,7 +2,7 @@ import ctcsound
 import logging
 
 class CsoundPlayer:
-    def __init__(self, flags, orc, export_orchestra: str, dyn_factor: int):
+    def __init__(self, flags, orc, export_orchestra=None, dyn_factor=1):
         self.flags = flags
         self.orc = orc
         self.export_orchestra = export_orchestra
@@ -33,7 +33,7 @@ class CsoundPlayer:
         retval = cs.evalCode(orc)
         if retval != retval:  # NaN is not equal to itself
             raise ValueError('Error in orchestra')
-        if orc:
+        if self.export_orchestra:
             with open(self.export_orchestra, 'w') as f:
                 f.write(orc)
         

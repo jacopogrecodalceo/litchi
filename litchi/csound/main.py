@@ -61,7 +61,7 @@ class LitchiCsound:
         self.score = self.builder.create_score()
         logging.info("Processed events and created score")
 
-    def play(self, export_score: str, export_orchestra: str):
+    def play(self, export_score=None, export_orchestra=None):
 
         if export_score:
             with open(export_score, 'w') as f:
