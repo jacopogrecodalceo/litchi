@@ -1,8 +1,8 @@
 import importlib
 import inspect
 
-from litchi.lilypond.main import LitchiLilyPond
-from litchi.csound.main import LitchiCsound
+from .lilypond.main import LitchiLilyPond
+from .csound.main import LitchiCsound
 
 class Litchi:
 	def __init__(self):
