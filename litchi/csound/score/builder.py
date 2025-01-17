@@ -1,5 +1,5 @@
-from litchi.lilypond.const import DYNs_amp
-from litchi.lilypond.utils import find_nearest
+from lilypond.const import DYNs_amp
+from lilypond.utils import find_nearest
 
 class CsoundScoreBuilder:
 	def __init__(self, node_events, node_tempi):

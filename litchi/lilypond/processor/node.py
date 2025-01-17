@@ -5,7 +5,7 @@ from typing import List
 import abjad
 from quickly.dom import lily
 
-from litchi.lilypond.classes import Event, Processor, Tempo
+from lilypond.classes import Event, Processor, Tempo
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)

@@ -6,9 +6,9 @@ from typing import List
 import abjad
 from quickly.dom import lily
 
-from litchi.lilypond.classes import Event, Processor
-from litchi.lilypond.const import DYNs, LILYPOND_OCTAVE_ADJUST
-from litchi.lilypond.utils import db2amp
+from lilypond.classes import Event, Processor
+from lilypond.const import DYNs, LILYPOND_OCTAVE_ADJUST
+from lilypond.utils import db2amp
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
