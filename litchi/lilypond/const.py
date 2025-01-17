@@ -1,4 +1,4 @@
-from lilypond.utils import db2amp
+from litchi.lilypond.utils import db2amp
 
 LILYPOND_OCTAVE_ADJUST = +3
 

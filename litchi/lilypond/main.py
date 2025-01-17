@@ -2,9 +2,9 @@ import quickly
 from quickly.dom import lily
 from quickly.dom.scope import Scope
 
-import lilypond.processor.node as node
-import lilypond.processor.param as param
-import lilypond.processor.articulation as articulation
+import litchi.lilypond.processor.node as node
+import litchi.lilypond.processor.param as param
+import litchi.lilypond.processor.articulation as articulation
 
 class LitchiLilyPond:
 	def __init__(self, ):

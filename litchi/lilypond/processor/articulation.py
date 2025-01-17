@@ -1,8 +1,8 @@
 import logging
-from typing import List, Tuple, Set, Type
+
 from quickly.dom import lily
-from lilypond.classes import Event, Processor
-from lilypond.const import ONSET_GLISSANDO_OFFSET
+from litchi.lilypond.classes import Event, Processor
+from litchi.lilypond.const import ONSET_GLISSANDO_OFFSET
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
