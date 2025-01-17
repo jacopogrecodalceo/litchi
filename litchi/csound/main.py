@@ -61,12 +61,25 @@ class LitchiCsound:
         self.score = self.builder.create_score()
         logging.info("Processed events and created score")
 
-    def play(self, export_score=None, export_orchestra=None):
+    def play(self, export_score=None, export_orchestra=None, export_wav=None, active_dynamic_factor=True):
 
         if export_score:
             with open(export_score, 'w') as f:
                 f.write(self.score)
 
-        self.player = CsoundPlayer(flags=self.csound_flags, orc=self.csound_orc, export_orchestra=export_orchestra, dyn_factor=self.dynamic_factor)
+        if active_dynamic_factor:
+            dyn_factor=self.dynamic_factor
+        else:
+            dyn_factor=1
+
+        self.player = CsoundPlayer(
+            flags=self.csound_flags,
+            orc=self.csound_orc,
+            export_orchestra=export_orchestra,
+            dyn_factor=dyn_factor,
+            export_wav=export_wav
+        )
+
         self.player.play(self.score)
+
         logging.info("Played Csound score")

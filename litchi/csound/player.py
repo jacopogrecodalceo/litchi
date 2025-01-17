@@ -2,11 +2,12 @@ import ctcsound
 import logging
 
 class CsoundPlayer:
-    def __init__(self, flags, orc, export_orchestra=None, dyn_factor=1):
+    def __init__(self, flags, orc, export_orchestra=None, dyn_factor=1, export_wav=None):
         self.flags = flags
         self.orc = orc
         self.export_orchestra = export_orchestra
         self.dyn_factor = dyn_factor
+        self.export_wav = export_wav
 
     def init(self):
         logging.info("Initializing Csound")
@@ -20,11 +21,6 @@ class CsoundPlayer:
         for flag in self.flags:
             cs.setOption(flag)
         cs.setOption('--limiter')
-
-    def set_export_option(self, cs, export):
-        if export:
-            logging.info(f"Setting export option: {export}")
-            cs.setOption(f'-o{export}')
 
     def prepare_orchestra(self, cs):
         logging.info("Preparing orchestra")
@@ -42,7 +38,10 @@ class CsoundPlayer:
     def play(self, csound_score, export=False):
         logging.info("Starting Csound playback")
         cs = self.init()
-        self.set_export_option(cs, export)
+        if self.export_wav:
+            logging.info(f"Setting export option: {self.export_wav}")
+            cs.setOption(f'-o{self.export_wav}')
+
         self.prepare_orchestra(cs)
         cs.readScore(csound_score)
         result = cs.start()
