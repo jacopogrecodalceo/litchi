@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Generator</title>
+    <script>
+        function generatePDF() {
+            window.location.href = '/generate_pdf';
+        }
+
+        function savePDF() {
+            fetch('/save_pdf', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                // Refresh the page
+                location.reload();
+            });
+        }
+    </script>
+</head>
+<body>
+    <h1>PDF Generator</h1>
+    <button onclick="generatePDF()">Generate PDF</button>
+    <button onclick="savePDF()">Save PDF</button>
+</body>
+</html>
