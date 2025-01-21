@@ -74,6 +74,7 @@ class LitchiLilyPond:
 
 		for tempo in self.tempi:
 			tempo.onset *= 4
+			tempo.bpm *= 4*tempo.div
 		for events in self.instrument_events:
 			for event in events:
 				event.onset *= 4
