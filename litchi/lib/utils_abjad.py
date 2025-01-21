@@ -165,7 +165,7 @@ def create_staves(instruments):
 		staves.append(staff) """
 	return staves
 
-def attach_meta_info(partial, leaf, show_ratio=True, show_cent=False, show_interval_name=False):
+def attach_meta_info(partial, leaf, show_ratio=True, ratio_direction='horizontal', show_cent=False, show_interval_name=False):
 	""" attach meta info to leaf"""
 	if show_cent and partial.cent_diff != 0:
 		cent_diff = partial.cent_diff
@@ -177,7 +177,11 @@ def attach_meta_info(partial, leaf, show_ratio=True, show_cent=False, show_inter
 			string = string[:5]
 		elif isinstance(string, float):
 			string = round(string, 2)
-		abjad.attach(abjad.Markup(rf'\markup \teeny \bold "{string}"'), leaf, direction=abjad.UP)
+		if ratio_direction.lower() == 'horizontal':
+			abjad.attach(abjad.Markup(rf'\markup \teeny \bold "{string}"'), leaf, direction=abjad.UP)
+		elif ratio_direction.lower() == 'vertical' and hasattr(partial.ratio, 'numerator'):
+			abjad.attach(abjad.Markup(rf'\markup \teeny \bold \fraction {partial.ratio.numerator} {partial.ratio.denominator}'), leaf, direction=abjad.UP)
+
 	if show_interval_name:
 		abjad.attach(abjad.Markup(rf'\markup \teeny \italic "{partial.interval_name}"'), leaf, direction=abjad.UP)
 
