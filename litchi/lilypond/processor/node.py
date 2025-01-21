@@ -119,8 +119,12 @@ class TempoStaff(Processor):
 				tempo.bpm = p.head
 				break
 
-		if not hasattr(tempo, 'bpm'):
+		if not hasattr(tempo, 'div') or tempo.div is None:
+			tempo.div = self._find_div_in_parent(node)
+			
+		if not hasattr(tempo, 'bpm') or tempo.bpm is None:
 			tempo.bpm = self._find_bpm_in_parent(node)
+
 
 		return tempo
 
@@ -130,6 +134,13 @@ class TempoStaff(Processor):
 				return p.head
 		logger.error(f"BPM not found for tempo node: {node}")
 		raise ValueError("BPM not found for tempo node")
+	
+	def _find_div_in_parent(self, node: lily.Duration):
+		for p in node.parent.descendants():
+			if isinstance(p, lily.Duration):
+				return p.head
+		logger.error(f"DIV not found for tempo node: {node}")
+		raise ValueError("DIV not found for tempo node")
 
 	def _update_onset(self, node, onset: float) -> float:
 		for p in node:

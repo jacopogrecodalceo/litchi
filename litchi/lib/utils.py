@@ -72,3 +72,21 @@ def get_name_from_basename(file):
 	result = re.findall(pattern, basename)
 
 	return ''.join(result)
+
+def linear_interpolate_list(x0, x1, num_elements) -> list:
+    """
+    Generate a list of interpolated values between two numbers.
+
+    Parameters:
+    x0 (float): The first number.
+    x1 (float): The second number.
+    num_elements (int): The number of elements in the interpolated list.
+
+    Returns:
+    list: A list of interpolated values.
+    """
+    if num_elements < 2:
+        raise ValueError("num_elements must be at least 2")
+
+    step = (x1 - x0) / (num_elements - 1)
+    return [x0 + step * i for i in range(num_elements)]
