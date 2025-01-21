@@ -43,7 +43,7 @@ class LitchiPath:
 		self.stylesheet_dir = stylesheet_dir
 
 	def generate_build_paths(self):
-		extensions = ['pdf', 'ly', 'sco', 'orc', 'wav']
+		extensions = ['pdf', 'ly', 'sco', 'orc', 'wav', 'log']
 		for ext in extensions:
 			setattr(self, f'build_{ext}', os.path.join(self.build_dir, f'{self.project_name}.{ext}'))
 
