@@ -1,0 +1,16 @@
+Metadata-Version: 2.1
+Name: litchi
+Version: 0.1.2
+Summary: a lilypond / csound parser
+Home-page: https://github.com/jacopogrecodalceo/litchi.git
+Author: jacopo greco d'alceo
+Author-email: jacopo.grecodalceo@gmail.com
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Requires-Dist: abjad==3.19
+Requires-Dist: ctcsound==6.17.1
+Requires-Dist: numpy==2.2.1
+Requires-Dist: quickly==0.7.0
+Requires-Dist: setuptools==74.1.2

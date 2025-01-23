@@ -219,3 +219,9 @@ def set_staff_info(staff_info):
 
 def repeat_each_leaf(original_list: list, n: int) -> list:
 	return [e for e in original_list for _ in range(n)]
+
+def add_glissandos(staff):
+    logical_ties = abjad.select.logical_ties(staff)
+    for tie, next_tie in zip(logical_ties, logical_ties[1:]):
+        if not isinstance(next_tie[0], abjad.Rest):
+            abjad.attach(abjad.Glissando(), tie[-1])

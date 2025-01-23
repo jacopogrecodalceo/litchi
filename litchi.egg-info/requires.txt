@@ -1,0 +1,5 @@
+abjad==3.19
+ctcsound==6.17.1
+numpy==2.2.1
+quickly==0.7.0
+setuptools==74.1.2

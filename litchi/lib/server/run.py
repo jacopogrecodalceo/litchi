@@ -17,7 +17,7 @@ class LitchiServer:
         self.watched_files = [self.watched_main_file]
         self.reload_modules = ['material', 'segment']
         self.current_time = datetime.now().strftime("%H:%M:%S")
-        self.html_template = 'index_pdf_frame.html'
+        self.html_template = 'index-pdf_frame.html'
         self.last_mtimes = {file: os.path.getmtime(file) for file in self.watched_files}
         self.shared_main = self.default_shared_main
 
