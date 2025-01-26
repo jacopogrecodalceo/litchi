@@ -57,8 +57,8 @@ class LitchiCsound:
 
     def process_events(self, node_events, node_tempi):
         self.dynamic_factor = len(node_events)
-        self.builder = CsoundScoreBuilder(node_events, node_tempi)
-        self.score = self.builder.create_score()
+        builder = CsoundScoreBuilder(node_events, node_tempi)
+        self.score = builder.create_score()
         logging.info("Processed events and created score")
 
     def play(self, export_score=None, export_orchestra=None, export_wav=None, active_dynamic_factor=True):

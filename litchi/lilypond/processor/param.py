@@ -26,9 +26,15 @@ class Duration(Processor):
 				match = re.search(r'dur.*', articulation.head)
 				if match:
 					try:
-						event.dur = ast.literal_eval(match.group(0))
-					except (SyntaxError, ValueError) as e:
-						logger.error(f"Failed to evaluate duration: {match.group(0)}. Error: {e}")
+						# remove any symbols left
+						command = match.group(0)
+						command = re.sub(r'"', '', command)
+
+						dur = event.dur
+						dur = eval(command)
+						event.dur = dur
+					except Exception as e:
+						raise SyntaxError(f"Failed to evaluate duration: {command} | Error: {e}")
 
 class Dynamic(Processor):
 	def process(self):

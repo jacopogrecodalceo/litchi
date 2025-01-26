@@ -1,4 +1,5 @@
 import abjad
+import abjadext.rmakers as rmakers
 import random
 import re
 
@@ -106,19 +107,31 @@ def persist_as_pdf(score, path, info):
 	lilypond_file = abjad.LilyPondFile([preamble, score])
 	abjad.persist.as_pdf(lilypond_file, path.build_pdf)
 
-def add_jitter_metronome(score, probability=.95, bpm_range=(40, 120), at_least=5/4):
-	for staff in score:
+def add_jitter_metronome(container, duration=(1, 4), probability=.95, bpm_range=(40, 120), minimum_duration=5/4):
 		dur = 0
-		if staff.name == 'MetricStaff':
-			for leaf in abjad.select.leaves(staff):
-				if random.random() > probability and dur > float(at_least):
-					metronome_mark = abjad.MetronomeMark(
-						abjad.Duration(1, 4),
-						random.randint(*bpm_range)
-					)
-					abjad.attach(metronome_mark, leaf)
-					dur = 0
-				dur += leaf.written_duration
+		for leaf in abjad.select.leaves(container):
+			if random.random() < probability and dur > float(minimum_duration):
+				metronome_mark = abjad.MetronomeMark(
+					abjad.Duration(duration),
+					random.randint(*bpm_range)
+				)
+				abjad.attach(metronome_mark, leaf)
+				dur = 0
+			dur += leaf.written_duration
+
+def add_rallentando_ending(staff, tempo, duration=(1, 4), start_pos=-8, end_pos=-1):
+
+    metronome_mark = abjad.MetronomeMark(
+        abjad.Duration(duration),
+        random.randint(tempo-1, tempo+1)
+    )
+    abjad.attach(metronome_mark, abjad.select.leaf(staff, start_pos))
+
+    metronome_mark = abjad.MetronomeMark(
+        abjad.Duration(duration),
+        random.randint(tempo//12, tempo//8)
+    )
+    abjad.attach(metronome_mark, abjad.select.leaf(staff, end_pos))
 
 def create_metric_staff(staves, tempo=60, diff=1):
 	"""
@@ -201,8 +214,7 @@ def set_short_instrument_name(name):
 	else:
 		return name[:2]
 	
-def set_staff_info(staff_info):
-	staff = abjad.Staff()
+def set_staff_info(staff, staff_info):
 	staff.name = staff_info['staff_name_id']
 	staff.with_commands.extend([
 		f'instrumentName = "{staff_info["staff_name_shown"]}"',
@@ -220,8 +232,59 @@ def set_staff_info(staff_info):
 def repeat_each_leaf(original_list: list, n: int) -> list:
 	return [e for e in original_list for _ in range(n)]
 
-def add_glissandos(staff):
-    logical_ties = abjad.select.logical_ties(staff)
-    for tie, next_tie in zip(logical_ties, logical_ties[1:]):
-        if not isinstance(next_tie[0], abjad.Rest):
-            abjad.attach(abjad.Glissando(), tie[-1])
+def add_glissandos(container, min_duration=0, each=1):
+	logical_ties = abjad.select.logical_ties(container)
+	for index, (tie, next_tie) in enumerate(zip(logical_ties, logical_ties[1:])):
+		if (
+			not isinstance(tie[0], abjad.Rest)
+			and not isinstance(next_tie[0], abjad.Rest)
+			and tie[-1].written_duration > min_duration
+			and index % each == each-1
+			# and not next_tie[0].written_pitch == tie[0].written_pitch
+		):
+			abjad.attach(abjad.Glissando(), tie[-1])
+
+def create_talea(talea: list, denominator: int, time_signatures: list, start: int = None, end:int = None, preamble=[], show=True, rewrite=True, extra_counts=[], trivial=False):
+	durations = [abjad.Duration(_) for _ in time_signatures][start:end]
+	tuplets = rmakers.talea(durations, talea, denominator, preamble=preamble, extra_counts=extra_counts)
+
+	voice = rmakers.wrap_in_time_signature_staff(tuplets, time_signatures[start:end])
+	if not trivial:
+		rmakers.extract_trivial(voice)
+	if rewrite:
+		rmakers.rewrite_meter(voice)
+	components = abjad.mutate.eject_contents(voice)
+
+	if show and len(talea) > 3:
+		leaves = abjad.select.leaves(components)
+		talea_durations = [abjad.Duration(1, denominator)*abs(_) for _ in talea if _ ]
+		partition = abjad.select.partition_by_durations(
+			leaves,
+			talea_durations,
+			cyclic=True,
+			fill=abjad.MORE,
+		)
+		for i, leaves in enumerate(partition):
+			try:
+				selected = abjad.select.leaf(leaves, 0, pitched=True)
+				abjad.attach(abjad.Markup(rf'\markup \huge \bold "{talea[i%len(talea)]}"'), selected)
+			except:
+				pass
+
+	return components
+
+def create_accent_pattern(accent_indices: list, length: int, accent_dynamic='f', non_accent_dynamic='p'):
+	# Initialize a list of the specified length filled with None
+	result = [None] * length
+
+	# Iterate through the accents list
+	for accent in accent_indices:
+		accent = accent-1
+		# Ensure the accent is within the valid range
+		if 0 <= accent < length:
+			result[accent] = accent_dynamic
+			# Insert 'p' just after 'f' if it's within the valid range
+			if accent + 1 < length:
+				result[accent + 1] = non_accent_dynamic
+
+	return result

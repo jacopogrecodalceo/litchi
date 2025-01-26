@@ -7,10 +7,10 @@ class LitchiPath:
 		self.project_name = os.path.basename(self.project_main_dir)
 		
 		self.find_build()
+		self.generate_build()
 		self.find_csound()
 		self.find_stylesheet()
 
-		self.generate_build_paths()
 
 	def find_build(self):
 		build_dir = os.path.join(self.project_main_dir, 'build')
@@ -42,7 +42,7 @@ class LitchiPath:
 			raise ResourceWarning('.ily stylesheet not found')
 		self.stylesheet_dir = stylesheet_dir
 
-	def generate_build_paths(self):
+	def generate_buil(self):
 		extensions = ['pdf', 'ly', 'sco', 'orc', 'wav', 'log']
 		for ext in extensions:
 			setattr(self, f'build_{ext}', os.path.join(self.build_dir, f'{self.project_name}.{ext}'))
