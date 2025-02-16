@@ -49,7 +49,7 @@ class Dynamic(Processor):
 				if not dynamics:
 					event.dyn = db2amp(DYNs[last_dyn])
 					continue
-				assert len(dynamics) == 1, '2 or more dynamics are associated to the same'
+				#assert len(dynamics) == 1, '2 or more dynamics are associated to the same'
 				dyn = dynamics[0]
 				if dyn.head in DYNs:
 					event.dyn = db2amp(DYNs[dyn.head])
@@ -83,8 +83,7 @@ class Dynamic(Processor):
 				events[index].dyn = value
 			return index + count
 		else:
-			logger.error(f"Failed to find the end dynamic for interpolation. Index: {index}, Start Dyn: {start_dyn}, End Dyn: {end_dyn}, Count: {count}, Direction: {direction}")
-			raise ValueError('Failed to find the end dynamic for interpolation.')
+			raise ValueError(f'Failed to find the end dynamic for interpolation. Index: {index}, Start Dyn: {start_dyn}, End Dyn: {end_dyn}, Count: {count}, Direction: {direction}')
 
 	def _find_next_dynamic(self, index: int, events: List[Event]):
 		end_dyn = None

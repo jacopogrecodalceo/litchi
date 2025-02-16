@@ -79,6 +79,7 @@ class Glissando(Processor):
 					grace_event.onset = head_event.onset + ONSET_GLISSANDO_OFFSET
 					grace_event.dur = -head_event.dur
 					grace_event.dyn = head_event.dyn
+					grace_event.channels = head_event.channels
 					grace_event.freq = next_head_event.freq
 					grace_event.pitch = next_head_event.pitch
 					grace_events.append((i + 1, grace_event))

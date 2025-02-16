@@ -28,7 +28,7 @@ class InstrumentStaff(Processor):
 
 		events = []
 		onset = 0
-
+		event_for_comment = None
 		for sub_node in node.descendants():
 			if isinstance(sub_node, lily.Note):
 				event = self._process_note(sub_node, onset)
@@ -36,10 +36,16 @@ class InstrumentStaff(Processor):
 				event.channels = channels
 				events.append(event)
 				onset += event.dur
+				event_for_comment = event
+			elif isinstance(sub_node, lily.SinglelineComment) and event_for_comment:
+				if sub_node not in event_for_comment.articulations:
+					event_for_comment.articulations.append(sub_node)
 			elif isinstance(sub_node, lily.Rest):
 				onset = self._process_rest(sub_node, onset)
 
-		assert events, 'No events.'
+		if not events:
+			print('WARNING: no events, probably only rests')
+
 		return events
 
 	def _find_csound_info(self, node):
@@ -74,8 +80,8 @@ class InstrumentStaff(Processor):
 				event.octave = p.head
 			elif isinstance(p, lily.Articulations):
 				event.articulations.extend(list(p.descendants()))
-			elif isinstance(p, lily.SinglelineComment):
-				event.articulations.append(p)
+			""" elif isinstance(p, lily.SinglelineComment):
+				event.articulations.append(p) """
 
 		return event
 

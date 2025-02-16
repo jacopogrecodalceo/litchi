@@ -53,7 +53,6 @@ class LitchiLilyPond:
 		# Nodes separation
 		self.tempi = node.TempoStaff(self.metric_staff).process()
 		self.instrument_events = node.InstrumentStaff(self.instrument_staves).process()
-
 		self.apply_processors(
 			[
 				param.Duration,

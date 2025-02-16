@@ -2,6 +2,10 @@ import os
 import json
 from datetime import datetime 
 
+SKIP_RENDER_IF_IN_NAME = [
+      '_lpf'
+]
+
 DATE = datetime.today().strftime('%y%m%d-%H%M')
 
 LILYPOND_OCTAVE_ADJUST = +3
