@@ -46,6 +46,7 @@ class LitchiCsound:
 
 	def read_orc(self):
 		orc_parts = ['; BEGINNING THE CONSTRUCTION OF THE ORCHESTRA\n']
+
 		for orc in self.orc_files:
 			if orc.exists():
 				with orc.open('r') as f:
@@ -61,7 +62,7 @@ class LitchiCsound:
 		self.csound_score_dict = builder.create_score_as_dict()
 		logging.info("Processed events and created score")
 
-	def play(self, export_orchestra=None, export_wav=None, apply_dynamic_factor=True, export_score=None, export_stems=None):
+	def play(self, export_orchestra=None, export_wav=None, apply_dynamic_factor=True, export_score=None, export_stems=None, message=True):
 
 		if apply_dynamic_factor:
 			dyn_factor=self.dynamic_factor
@@ -74,6 +75,7 @@ class LitchiCsound:
 			csound_score_dict=self.csound_score_dict,
 			export_orchestra=export_orchestra,
 			dyn_factor=dyn_factor,
+			message=message,
 			export_wav=export_wav,
 			export_stems=export_stems,
 			export_score=export_score,

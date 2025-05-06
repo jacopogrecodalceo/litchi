@@ -4,11 +4,27 @@ import abjadext.rmakers as rmakers
 import random
 import re
 from fractions import Fraction
+from litchi.lib.scala import Interval
 
 from decimal import Decimal, getcontext
 
 import litchi.lib.engraving as engraving
 from litchi.lib.const import METRIC_STAFF_SPACE_DIV
+
+def split_at_first_integer(s):
+    for i, char in enumerate(s):
+        if char.isdigit():
+            return s[:i], s[i:]
+    return s, ''
+
+def attach_interval_markup(note: abjad.Leaf, interval: Interval):
+	markup_freq = abjad.Markup(rf'\markup \teeny "FREQ: {interval.freq}Hz"')
+	markup_pitch_freq = abjad.Markup(rf'\markup \teeny "REAL FREQ: {round(abjad.NamedPitch(interval.pitch).hertz, 2)}"')
+	markup_cent = abjad.Markup(rf'\markup \teeny "{interval.cents}"')
+
+	abjad.attach(markup_cent, note, direction=abjad.UP)
+	abjad.attach(markup_pitch_freq, note, direction=abjad.UP, tag=abjad.Tag('REAL_FREQ'), deactivate=True)
+	abjad.attach(markup_freq, note, direction=abjad.UP, tag=abjad.Tag("FREQ"), deactivate=True)
 
 def make_dummy_staff():
 	staff = abjad.Staff([abjad.Note("b''''1")])
@@ -122,6 +138,7 @@ def persist_as_pdf(score, path, info):
 	#layout_block = abjad.Block('layout')
 	#score_block = abjad.Block('score', [score, layout_block])
 	preamble = engraving.make_preamble(path, info)
+	
 	lilypond_file = abjad.LilyPondFile([preamble, score])
 	abjad.persist.as_pdf(lilypond_file, path.build_pdf)
 
@@ -373,11 +390,12 @@ def set_pitch_and_markup(this_pitch, ties, transpose=0, log=False):
 		note.note_head.written_pitch = written_pitch
 
 class MetricStaff:
-	def __init__(self, time_signatures, tempo=65, duration=(1, 4), tempo_diff=1):
+	def __init__(self, time_signatures, tempo=65, duration=(1, 4), tempo_diff=1, measures=None):
 		self.tempo = tempo
 		self.duration = duration
 		self.tempo_diff = tempo_diff
 		self.time_signatures = time_signatures
+		self.measures = measures
 
 	def create_time_signatures(self, staff):
 		durations = [ts.duration for ts in self.time_signatures]
@@ -407,6 +425,16 @@ class MetricStaff:
 		)
 		abjad.attach(metronome_mark, abjad.select.leaf(voice, 0))
 		#add_jitter_metronome(voice, probability=.25)
+		if self.measures:
+			measures_count = abjad.select.group_by_measure(voice)
+			for (measure_number, tempo) in self.measures:
+				metronome_mark = abjad.MetronomeMark(
+					abjad.Duration(self.duration),
+					random.randint(tempo - self.tempo_diff, tempo + self.tempo_diff)
+				)
+				abjad.attach(metronome_mark, abjad.select.leaf(measures_count[measure_number], 0))
+
+
 		staff.extend(voice)
 		return staff
 

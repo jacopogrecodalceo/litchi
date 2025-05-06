@@ -11,6 +11,7 @@ class CsoundPlayer:
 		csound_orchestra,
 		csound_score_dict,
 		dyn_factor=1,
+		message=True,
 		export_orchestra=None,
 		export_wav=None,
 		export_stems=None,
@@ -21,6 +22,7 @@ class CsoundPlayer:
 		self.csound_flags = csound_flags
 		self.csound_orchestra = csound_orchestra
 		self.export_orchestra = export_orchestra
+		self.message = message
 		self.dyn_factor = dyn_factor
 		self.export_wav = export_wav
 		self.export_stems = export_stems
@@ -30,6 +32,8 @@ class CsoundPlayer:
 		logging.info("Initializing Csound")
 		ctcsound.csoundInitialize(ctcsound.CSOUNDINIT_NO_ATEXIT | ctcsound.CSOUNDINIT_NO_SIGNAL_HANDLER)
 		cs = ctcsound.Csound()
+		if not self.message:
+			cs.createMessageBuffer(self.message)
 		self.set_csound_options(cs)
 		return cs
 
@@ -53,9 +57,25 @@ class CsoundPlayer:
 			with open(self.export_score, 'w') as f:
 				f.write(self.csound_score)
 
+	""" def add_tempo_instrument(self) -> str:
+		t_values = self.csound_score_dict['t_statement'].split()
+
+		string = f'''
+gktempo init {t_values[2]}		
+	instr tempo_counter
+
+gktempo linseg {", ".join(t_values[2:])}
+printk2 floor(gktempo)
+	endin
+	alwayson("tempo_counter")
+
+'''
+		return string """
+
 	def prepare_orchestra(self, cs):
 		logging.info("Preparing orchestra")
 		orc_prefix = f'giDYN init 1/{self.dyn_factor}\n'
+		#orc_prefix += self.add_tempo_instrument()
 		orc = orc_prefix + self.csound_orchestra
 		retval = cs.evalCode(orc)
 		if retval != retval:  # NaN is not equal to itself
