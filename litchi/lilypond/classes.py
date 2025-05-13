@@ -1,6 +1,7 @@
 from typing import List, Optional
 from quickly.dom import lily
 
+
 class Tempo:
     def __init__(self):
         self.onset: float = 0.0

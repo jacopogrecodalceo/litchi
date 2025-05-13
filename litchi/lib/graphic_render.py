@@ -1,3 +1,4 @@
+import os
 import abjad
 import cairosvg
 import io
@@ -7,14 +8,30 @@ import shoebot
 
 
 # Function Definitions
-def draw_open_polyline(b, polyline):
+def draw_open_polyline(b, polyline, stroke_width=3):
 	b.stroke(*colors.to_rgb('black'))
 	b.fill(None)
-	b.strokewidth(3)
+	b.strokewidth(stroke_width)
 	pts = polyline.vertices
 	for i in range(len(pts) - 1):  # Do not connect start/end
 		b.line(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1])
 
+def draw_pitches(b, polyline, index, pitches, events_space_y):
+
+	pts = polyline.vertices
+	b.fontsize(32)  # Adjust font size as needed
+	b.fill(*colors.to_rgb('black'))  # Text color
+	
+	for pitch, (x, y) in zip(pitches, pts):
+		# Draw a small circle at the point
+		b.stroke(None)
+		b.fill(*colors.to_rgb('purple'))  # Point color
+		b.circle(x, y, 15)  # Point radius
+		
+		# Draw the index text next to the point
+		b.fill(*colors.to_rgb('black'))
+		b.text(str(pitch), x, y - 15)  # Offset the text slightly from the point
+	b.text(f'{index}, {len(pitches) = }', 135, 95+events_space_y*index)  # Offset the text slightly from the point
 
 def draw_cubic_interpolation(b, polyline):
 	b.stroke(*colors.to_rgb('black'))
@@ -92,7 +109,7 @@ def draw_quadratic_bezier_chain(b, polyline):
 	b.endpath()
 
 
-def draw_smooth_bezier(b, pitches, polyline, stroke_width=3):
+def draw_smooth_bezier(b, polyline, stroke_width=3):
 	b.stroke(*colors.to_rgb('black'))
 	b.fill(None)
 	b.strokewidth(stroke_width)
@@ -116,39 +133,23 @@ def draw_smooth_bezier(b, pitches, polyline, stroke_width=3):
 	# End the path
 	b.endpath()
 
-	# Draw point indices
-	if hasattr(b, 'fontnames'):
-		b.fontnames = ['Andale Mono', 'Courier', 'monospace']  # Try available monospace fonts
-	b.fontsize(32)  # Adjust font size as needed
-	b.fill(*colors.to_rgb('black'))  # Text color
-	for pitch, (x, y) in zip(pitches, pts):
-		# Draw a small circle at the point
-		b.stroke(None)
-		b.fill(*colors.to_rgb('purple'))  # Point color
-		b.circle(x, y-stroke_width, 15)  # Point radius
-		
-		# Draw the index text next to the point
-		b.fill(*colors.to_rgb('black'))
-		b.text(str(pitch), x, y - 15)  # Offset the text slightly from the point
+# drawing params
+width = 297 * 10
+height = 210 * 10
+margin = 95
+usable_width = width - 2 * margin
+usable_height = height - 2 * margin
 
 
-def draw(node_events_raw):
+def draw_from_nodes(node_events_raw, output_path):
 
 	node_events = []
 	for events in node_events_raw:
 		node_events.append(sorted(events, key=lambda event: event.onset))
 
-	# drawing params
-	width = 297 * 10
-	height = 210 * 10
-	margin = 95
-
-	usable_width = width - 2 * margin
-	usable_height = height - 2 * margin
 	events_space_y = usable_height / len(node_events)
-
 	# find max onset and freq
-	max_onset = max(event.onset for group in node_events for event in group)
+	max_onset = max(event.onset + event.dur for group in node_events for event in group)
 	max_freq = max(event.freq for group in node_events for event in group)
 
 	# build polylines
@@ -159,8 +160,6 @@ def draw(node_events_raw):
 		for event in events:
 			x = margin + (event.onset / max_onset * usable_width)
 			y = margin + (index_events * events_space_y) + ((max_freq - event.freq) / max_freq * events_space_y)
-			print(event.pitch)
-			print(event.onset)
 			coord = (x, y)
 			points.append(coord)
 
@@ -174,16 +173,106 @@ def draw(node_events_raw):
 	b = shoebot.create_bot(buff=svg_data, format='svg')
 	b.size(width, height)
 	b.background(*colors.to_rgba('white'))
-	
 	# draw polylines
-	for pitches, poly in polys:
+	for index, (pitches, poly) in enumerate(polys):
 		assert len(pitches) == len(poly) // 2, f'{len(pitches) = }, {len(poly) =}'
 		draw_open_polyline(b, poly)
-		draw_smooth_bezier(b, pitches, poly)
+		draw_pitches(b, poly, index, pitches, events_space_y)
+		draw_smooth_bezier(b, poly)
 		
 	b.finish()
 	svg_data.seek(0)
 	svg_output = svg_data.read()
 
 	# export PNG
-	cairosvg.svg2png(bytestring=svg_output, write_to="output.png")
+	cairosvg.svg2png(bytestring=svg_output, write_to=output_path)
+
+
+def draw_from_csound_score(csound_score_path, output_path):
+
+	if not os.path.exists(csound_score_path):
+		raise 'No score'
+	
+	score = []
+	with open(csound_score_path, 'r') as f:
+		lines = f.readlines()
+		all_i_lines = [line for line in lines if line.startswith('i')]
+		while lines:
+			line = lines.pop(0)
+			if line.startswith('staff index'):
+				staff = []
+				while lines:
+					peek = lines[0]
+					if peek.startswith('staff index'):
+						break
+					line = lines.pop(0)
+					if line.startswith('i'):
+						staff.append(line)
+				score.append(staff)
+
+	assert sum([len(staff) for staff in score]) == len(all_i_lines), 'u missing smthig'
+	
+
+	for staff in score:
+		for line_index, line in enumerate(staff):
+			parts = line.strip().split()
+			converted = []
+			for p in parts:
+				if p.replace('.', '', 1).isdigit():  # handles floats
+					converted.append(float(p))
+				else:
+					converted.append(p)
+			staff[line_index] = converted
+	#i "rod" 8.5 2.0 0.5303030303030303 0 317.77777777777777 1.002
+
+
+
+	events_space_y = usable_height / len(score)
+
+	# find max onset and freq
+	# onset is #2
+	# dur is #3
+	# freq is #6
+	max_onset = max(p[2] + p[3] for line in score for p in line)
+	max_freq = max(p[6] for line in score for p in line)
+
+	# build polylines
+	polys = []
+	for index_staff, line in enumerate(score):
+		pitches = []
+		points = []
+		for p in line:
+			onset = p[2]
+			freq = p[6]
+			x = margin + (onset / max_onset * usable_width)
+			y = margin + (index_staff * events_space_y) + ((max_freq - freq) / max_freq * events_space_y)
+			coord = (x, y)
+			points.append(coord)
+
+			pitch = abjad.NamedPitch.from_hertz(freq).name
+			pitches.append(pitch)
+
+		polys.append((pitches, Polyline(points)))
+	#exit()
+	# SVG buffer
+	svg_data = io.BytesIO()
+	b = shoebot.create_bot(buff=svg_data, format='svg')
+	b.size(width, height)
+	b.background(*colors.to_rgba('white'))
+	# draw polylines
+	for index, (pitches, poly) in enumerate(polys):
+		assert len(pitches) == len(poly) // 2, f'{len(pitches) = }, {len(poly) =}'
+		draw_open_polyline(b, poly)
+		draw_pitches(b, poly, index, pitches, events_space_y)
+		draw_smooth_bezier(b, poly)
+		
+	b.finish()
+	svg_data.seek(0)
+	svg_output = svg_data.read()
+
+	# export PNG
+	cairosvg.svg2png(bytestring=svg_output, write_to=output_path)
+
+def draw(node_events_raw, path):
+	draw_from_nodes(node_events_raw, f'{path.build}-from_nodes.png')
+	draw_from_csound_score(path.build_sco, f'{path.build}-from_orc.png')

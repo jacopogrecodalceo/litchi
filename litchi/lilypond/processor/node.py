@@ -42,6 +42,7 @@ class InstrumentStaff(Processor):
 					event_for_comment.articulations.append(sub_node)
 			elif isinstance(sub_node, lily.Rest):
 				onset, rest = self._process_rest(sub_node, onset)
+				#events.append(rest) this can be long..
 
 		if not events:
 			print('WARNING: no events, probably only rests')
