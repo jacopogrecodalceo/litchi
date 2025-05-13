@@ -11,6 +11,59 @@ from decimal import Decimal, getcontext
 import litchi.lib.engraving as engraving
 from litchi.lib.const import METRIC_STAFF_SPACE_DIV
 
+def assign_clefs(container: abjad.Container, duration=(5, 4)):
+	CLEFs_RANGE = {
+		'treble^15': (127, 61),
+		'treble^8': (60, 33),
+		'treble': (32, -1),
+		'bass': (-2, -30),
+		'bass_8': (-31, -50),
+		'bass_15': (-51, -127),
+	}
+
+	def get_clef_from_pitch(pitch):
+		for clef_name, (high, low) in CLEFs_RANGE.items():
+			if low <= pitch <= high:
+				return clef_name
+		raise ValueError(f"Pitch {pitch} out of clef range")
+
+	clef_sections = []
+	current_clef = None
+	current_section = []
+
+	for note in abjad.select.notes(container):
+		pitch = abjad.NumberedPitch(note)
+		clef = get_clef_from_pitch(pitch)
+
+		if clef != current_clef:
+			if current_section:
+				clef_sections.append((current_clef, current_section))
+			current_clef = clef
+			current_section = []
+
+		current_section.append(note)
+
+	if current_section:
+		clef_sections.append((current_clef, current_section))
+
+
+	# assign starting clef
+	if isinstance(container[0], abjad.Rest):
+		clef, section = clef_sections[0]
+		current_clef = clef
+		abjad.attach(abjad.Clef(clef), container[0])
+		clef_sections.pop(0)
+	else:
+		current_clef = 'treble'
+
+	for clef, section in clef_sections:
+		total_dur = sum([abjad.get.duration(_) for _ in section])
+		if total_dur > abjad.Duration(duration) and clef != current_clef:
+			note = section[0]
+			abjad.attach(abjad.Clef(clef), note)
+			current_clef = clef
+
+
 def split_at_first_integer(s):
     for i, char in enumerate(s):
         if char.isdigit():
@@ -19,12 +72,13 @@ def split_at_first_integer(s):
 
 def attach_interval_markup(note: abjad.Leaf, interval: Interval):
 	markup_freq = abjad.Markup(rf'\markup \teeny "FREQ: {interval.freq}Hz"')
-	markup_pitch_freq = abjad.Markup(rf'\markup \teeny "REAL FREQ: {round(abjad.NamedPitch(interval.pitch).hertz, 2)}"')
-	markup_cent = abjad.Markup(rf'\markup \teeny "{interval.cents}"')
-
-	abjad.attach(markup_cent, note, direction=abjad.UP)
-	abjad.attach(markup_pitch_freq, note, direction=abjad.UP, tag=abjad.Tag('REAL_FREQ'), deactivate=True)
 	abjad.attach(markup_freq, note, direction=abjad.UP, tag=abjad.Tag("FREQ"), deactivate=True)
+	markup_pitch_freq = abjad.Markup(rf'\markup \teeny "REAL FREQ: {round(abjad.NamedPitch(interval.pitch).hertz, 2)}"')
+	abjad.attach(markup_pitch_freq, note, direction=abjad.UP, tag=abjad.Tag('REAL_FREQ'), deactivate=True)
+
+	if interval.cents:
+		markup_cent = abjad.Markup(rf'\markup \teeny "{interval.cents}"')
+		abjad.attach(markup_cent, note, direction=abjad.UP)
 
 def make_dummy_staff():
 	staff = abjad.Staff([abjad.Note("b''''1")])

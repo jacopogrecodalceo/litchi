@@ -71,14 +71,11 @@ def get_name_from_basename(file):
     # REMOVE DATE FROM THE BEGINNING
     basename = re.sub(r'\d+-', '', basename)
 
-    # REPLACE _
-    basename = basename.replace('_', ' ')
-
     # REMOVE SYMBOLS
     pattern = r'[a-zA-Z0-9]+'
     result = re.findall(pattern, basename)
 
-    return ''.join(result)
+    return ' '.join(result)
 
 def linear_interpolate_list(x0, x1, num_elements) -> list:
     """

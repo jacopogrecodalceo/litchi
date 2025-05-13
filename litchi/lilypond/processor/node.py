@@ -111,19 +111,29 @@ class TempoStaff(Processor):
 					tempi.append(tempo)
 				else:
 					onset = self._update_onset(node, onset)
-
+		#exit()
 		return tempi
 
 	def _process_tempo_node(self, node: lily.Tempo, onset: float) -> Tempo:
 		tempo = Tempo()
 		tempo.onset = onset
 
+		found = False
 		for p in node.descendants():
 			if isinstance(p, lily.Duration):
 				tempo.div = p.head
 			elif isinstance(p, lily.Int):
 				tempo.bpm = p.head
+				found = True
 				break
+
+		if not found:
+			for p in node.forward():
+				if isinstance(p, lily.Duration):
+					tempo.div = p.head
+				elif isinstance(p, lily.Int):
+					tempo.bpm = p.head
+					break
 
 		if not hasattr(tempo, 'div') or tempo.div is None:
 			tempo.div = self._find_div_in_parent(node)
