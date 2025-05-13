@@ -5,7 +5,7 @@ from typing import List
 import abjad
 from quickly.dom import lily
 
-from litchi.lilypond.classes import Event, Processor, Tempo
+from litchi.lilypond.classes import Event, Rest, Processor, Tempo
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -41,7 +41,7 @@ class InstrumentStaff(Processor):
 				if sub_node not in event_for_comment.articulations:
 					event_for_comment.articulations.append(sub_node)
 			elif isinstance(sub_node, lily.Rest):
-				onset = self._process_rest(sub_node, onset)
+				onset, rest = self._process_rest(sub_node, onset)
 
 		if not events:
 			print('WARNING: no events, probably only rests')
@@ -87,10 +87,13 @@ class InstrumentStaff(Processor):
 
 	def _process_rest(self, node: lily.Rest, onset: float) -> float:
 		multiplier = self._get_multiplier(node)
+		rest = Rest()
+
 		for p in node:
 			if isinstance(p, lily.Duration):
+				rest.onset = float(p.head) * float(multiplier)
 				onset += float(p.head) * float(multiplier)
-		return onset
+		return onset, rest
 
 	def _get_multiplier(self, node) -> float:
 		multiplier = 1

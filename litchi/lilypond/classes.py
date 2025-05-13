@@ -19,6 +19,11 @@ class Event:
         self.env = 0
         self.channels = 2
 
+class Rest:
+    def __init__(self):
+        self.name: Optional[str] = None
+        self.onset: float = 0.0
+
 class Processor:
     def __init__(self, nodes):
         self.nodes = nodes
