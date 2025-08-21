@@ -48,7 +48,7 @@ class LitchiPath:
 		raise ValueError('Directory not found')
 	
 	def generate_build(self):
-		extensions = ['pdf', 'ly', 'sco', 'orc', 'wav', 'log', 'png']
+		extensions = ['pdf', 'ly', 'sco', 'orc', 'wav', 'log', 'png', 'midi']
 		for ext in extensions:
 			setattr(self, f'build_{ext}', os.path.join(self.build_dir, f'{self.project_name}.{ext}'))		
 		setattr(self, f'build', os.path.join(self.build_dir, self.project_name))		

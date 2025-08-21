@@ -26,15 +26,21 @@ class Duration(Processor):
 				match = re.search(r'dur.*', articulation.head)
 				if match:
 					try:
-						# remove any symbols left
-						command = match.group(0)
-						command = re.sub(r'"', '', command)
 
 						dur = event.dur
-						dur = eval(command)
+
+						command = match.group(0)
+						command = re.sub(r'"', '', command)
+						if '=' in command:
+							dur = float(command.split('=')[1])
+						else:
+							# remove any symbols left
+							dur = eval(command)
+						#print(command.split('=')[1], dur)
 						event.dur = dur
 					except Exception as e:
 						raise SyntaxError(f"Failed to evaluate duration: {command} | Error: {e}")
+
 
 class Dynamic(Processor):
 	def process(self):
@@ -112,3 +118,16 @@ class Frequency(Processor):
 				match = re.search(r'([\d.]+)Hz', articulation.head)
 				if match:
 					event.freq = float(match.group(1))
+
+class Channels(Processor):
+	def process(self):
+		for events in self.nodes:
+			for event in events:
+				self.process_markup_channel(event)
+
+	def process_markup_channel(self, event: Event):
+		for articulation in event.articulations:
+			if isinstance(articulation, (lily.SinglelineComment, lily.String)):
+				match = re.search(r'([\d.]+)ch', articulation.head)
+				if match:
+					event.channel = int(match.group(1))

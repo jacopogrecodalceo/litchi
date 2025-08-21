@@ -25,7 +25,7 @@ def export_scala(scala, output_dir: str):
 	tagline = "jacqouemin"
 }
 """
-	key_to_start = scala.origin_named_pitch.pitch_class.number
+	key_to_start = scala.origin_numbered_pitch.pitch_class.number
 	keys = list(scala.chromatic_intervals.keys())
 	start_index = keys.index(key_to_start)
 	shifted_chromatic_intervals = {key: scala.chromatic_intervals[key] for key in keys[start_index:] + keys[:start_index]}
@@ -38,7 +38,7 @@ def export_scala(scala, output_dir: str):
 			\fill-line {{ \fontsize #15 "{scala.name}" }}
 			\vspace #2
 			\fill-line {{ \fontsize #9 "***" }}
-			\fill-line {{ \fontsize #9 "origin: {scala.origin_value}, {scala.origin_named_pitch.name}" }}
+			\fill-line {{ \fontsize #9 "origin: {scala.origin_value}, {scala.origin_numbered_pitch.name}" }}
 			\vspace #.5
 			\fill-line {{ \italic "jacqouemin greco d'alceo" }}
 		}}

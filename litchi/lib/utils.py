@@ -72,7 +72,7 @@ def get_name_from_basename(file):
     basename = re.sub(r'\d+-', '', basename)
 
     # REMOVE SYMBOLS
-    pattern = r'[a-zA-Z0-9]+'
+    pattern = r'[a-zA-Z0-9,&]+'
     result = re.findall(pattern, basename)
 
     return ' '.join(result)

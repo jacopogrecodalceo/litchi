@@ -11,14 +11,330 @@ from decimal import Decimal, getcontext
 import litchi.lib.engraving as engraving
 from litchi.lib.const import METRIC_STAFF_SPACE_DIV
 
+def fill_staff_with_rests(staff, structure_dur):
+	staff_dur = sum([abjad.get.duration(_) for _ in staff])
+	while structure_dur > staff_dur:
+		staff.append(abjad.Rest('r1'))
+		staff_dur = sum([abjad.get.duration(_) for _ in staff])
+
+def process_talea_with_intex(denominator, index_denominator, indexes):
+	temp = [-1] * denominator
+	new_indexes = []
+	for onset in indexes:
+		index = (onset-1)*(denominator//index_denominator)
+		new_indexes.append(index)
+		temp[index] = 1
+	talea = []
+	negatives = []
+
+	while len(temp) > 0:
+		
+		value = temp.pop(0)
+
+		if value == -1:
+			negatives.append(value)
+			continue
+
+		if negatives:
+			talea.append(sum(negatives))
+			negatives = []
+
+		if len(temp) == 0:
+			talea.append(value)
+			break
+
+		next_value = temp[0]
+		# sure is positive
+		if next_value == -1:
+			max_values = []
+			for n in temp:
+				if n == 1:
+					break
+				max_values.append(n)
+			new_value = random.randint(1, abs(sum(max_values)))
+			talea.append(new_value)
+			# remove the values used in max_values
+			for _ in range(new_value-1):
+				temp.pop(0)
+
+		else:
+			talea.append(value)
+
+	if negatives:
+		talea.append(sum(negatives))
+
+	assert sum(abs(_) for _ in talea) == denominator, f'{sum(abs(_) for _ in talea) = } over {denominator =}'
+
+	return talea
+
+
+
+def fill_duration(target_dur=1, how_many_values=12, grains=[1/pow(2, x) for x in range(2, 6)]):
+	"""
+	Fills a target duration with a specified number of values using given grains.
+
+	Args:
+		target_dur (float): The total duration to be filled.
+		how_many_values (int): The maximum number of values to generate.
+		grains (list): A list of possible duration values (grains) to use.
+
+	Returns:
+		list: A list of duration values that sum up to the target duration.
+	"""
+	print(f'I am filling a duration of {target_dur = } with {how_many_values} values - looking into {grains}..')
+
+	values = []
+	remaining = target_dur
+
+	while remaining > 0 and len(values) < how_many_values:
+		candidates = [v for v in grains if v <= remaining]
+		if not candidates:
+			break
+		n = random.choice(candidates)
+		values.append(n)
+		remaining -= n
+
+	if remaining == 0:
+		return values
+	else:
+		return fill_duration(target_dur, how_many_values, grains)
+
+def fill_duration_s(string, target_dur=1, how_many_values=None, grains=None, _index=0):
+	"""
+	Fills a target duration with a specified number of values using given grains,
+	using a string as a deterministic pseudo-random source.
+
+	Args:
+		string (str): The string to derive variation from.
+		target_dur (float): The total duration to be filled.
+		how_many_values (int): The maximum number of values to generate.
+		grains (list): A list of possible duration values (grains) to use.
+		_index (int): Internal offset index for recursion.
+
+	Returns:
+		list: A list of duration values that sum up to the target duration.
+	"""
+
+	if how_many_values is None:
+		how_many_values = len(string)
+
+	if grains is None:
+		grains = [1 / pow(2, x) for x in range(1, 6)]
+
+	print(f'I am filling a duration of {target_dur = } with {how_many_values} values - using {string = } and index {_index}')
+
+	#string_int = [abs(ord(c.lower()) - ord('a')) for c in string if c.isalpha()]
+	string_int = [abs(ord(c) - ord('a')) for c in string if c.isalpha()]
+	if not string_int:
+		raise ValueError("Input string must contain at least one alphabetical character.")
+
+	values = []
+	remaining = target_dur
+	index_candidate = 0
+
+	while remaining > 0 and len(values) < how_many_values:
+		candidates = [v for v in grains if v <= remaining]
+		if not candidates:
+			break
+		idx = (index_candidate + _index) % len(string_int)
+		grain_idx = string_int[idx] % len(candidates)
+		n = candidates[grain_idx]
+		values.append(n)
+		remaining = round(remaining - n, 10)
+		index_candidate += 1
+
+	if remaining == 0:
+		return values
+	else:
+		return fill_duration_s(string, target_dur, how_many_values, grains, _index=_index + 1)
+	
+def make_transposition(string, limits=(-2, 2)):
+	pool = []
+	words = string.split()
+	if len(words) > 1:
+		for word in words:
+			w_len = len(word)
+			if w_len > 3:
+				pool.append((w_len % (limits[1] + 1)) + limits[0])
+			else:
+				pool.append(w_len)
+		if len(pool) > 4:
+			return pool
+	
+	for c in string:
+		string_int = abs(ord(c) - ord('a'))
+		pool.append((string_int % (limits[1] + 1)) + limits[0])
+
+	return pool
+
+
+NOTE_NAMEs = [abjad.NumberedPitchClass(i).name for i in range(12)]
+
+def get_notes_from_string(string, max_notes=None):
+
+	if not max_notes:
+		max_notes = len(string)
+
+	def _get_notes(string, index=0):
+		results = []
+
+		if index == 0:
+			# Forward and inverted two-letter combinations
+			for i in range(len(string) - 1):
+				a, b = string[i], string[i + 1]
+				if a + b in NOTE_NAMEs:
+					results.append(a + b)
+				if b + a in NOTE_NAMEs:
+					results.append(b + a)
+
+			# Single-letter matches
+			for c in string:
+				if c in NOTE_NAMEs:
+					results.append(c)
+
+		else:
+			# Shifted letters by index
+			for i in range(len(string) - 1):
+				a_shifted = chr(((ord(string[i]) - ord('a') + index) % 26) + ord('a'))
+				b = string[i + 1]
+				if a_shifted + b in NOTE_NAMEs:
+					results.append(a_shifted + b)
+				if b + a_shifted in NOTE_NAMEs:
+					results.append(b + a_shifted)
+
+		return results
+
+	pool = []
+
+	i = 0
+	while len(pool) < max_notes:
+		notes = _get_notes(string, index=i)
+		print(f'{string}, index = {i}')
+		if i > 200:  # stop if no more results
+			raise ValueError("String has some problem.. it's the 200 times i tried..")
+		pool.extend(notes)
+		i += 1
+	return pool
+
+
+def rotate(lst, n):
+	n = n % len(lst)  # ensure n is within bounds
+	return lst[-n:] + lst[:-n]
+
+def get_assignable(duration):
+	if duration.is_assignable:
+		return [duration]
+
+	a = duration.equal_or_lesser_assignable
+	b = duration - a
+
+	return get_assignable(a) + get_assignable(b)
+
+def euclidean_rhythm(pulses, steps, rot=0):
+	"""
+	Generate a Euclidean rhythm pattern.
+	
+	Args:
+		steps: Total number of steps in the pattern (e.g., 8 for an 8-step sequence)
+		pulses: Number of active steps (1s) in the pattern
+		
+	Returns:
+		List representing the rhythm pattern with 0s and 1s
+	"""
+
+	
+	pattern = []
+	counts = []
+	remainders = []
+	divisor = steps - pulses
+	
+	remainders.append(pulses)
+	level = 0
+	
+	while True:
+		counts.append(divisor // remainders[level])
+		remainders.append(divisor % remainders[level])
+		divisor = remainders[level]
+		level += 1
+		if remainders[level] <= 1:
+			break
+	
+	counts.append(divisor)
+	
+	def build(level):
+		if level == -1:
+			pattern.append(0)
+		elif level == -2:
+			pattern.append(1)
+		else:
+			for _ in range(counts[level]):
+				build(level - 1)
+			if remainders[level] != 0:
+				build(level - 2)
+	
+	build(level)
+	
+	# Get the first 'steps' elements and reverse to start with a pulse
+	pattern = pattern[:steps]
+	i = pattern.index(1)
+	pattern = pattern[i:] + pattern[:i]
+	pattern = rotate(pattern, rot)
+	return pattern
+
+def compress_zeros(pattern: list[int]) -> list[int]:
+	new_pattern = []
+	i = 0
+	n = len(pattern)
+	
+	while i < n:
+		if pattern[i] == 1:
+			# Start counting zeros after this 1
+			count = 1
+			i += 1  # move to next position
+			while i < n and pattern[i] == 0:
+				count += 1
+				i += 1
+			if count > 0:
+				new_pattern.append(count)
+		else:
+			# Keep single zeros as is
+			new_pattern.append(0)
+			i += 1
+			
+	return new_pattern
+
+def make_euclidean_tuplet(pulses, steps, duration=1, fill_with_rest=True, rot=0, preamble=[]):
+	"""Generates an Abjad Tuplet from a Euclidean rhythm."""
+
+	if pulses > steps:
+		pulses = steps
+
+
+	pattern = euclidean_rhythm(pulses, steps, rot=rot)
+	if not fill_with_rest:
+		pattern = compress_zeros(pattern)
+	pattern = [value if value != 0 else -1 for value in pattern]
+
+
+	denominator = 2 ** math.floor(math.log2(steps))
+	denominator = denominator // duration[0].pair[0]
+	extra_counts = [steps-denominator]
+	#print(duration, pattern, denominator)
+	tuplets = rmakers.talea(duration, pattern, denominator, extra_counts=extra_counts, preamble=preamble)
+	
+	lilypond_markup = rf'\markup \box "eu({pulses}, {steps}, {rot})"'
+	markup = abjad.Markup(lilypond_markup)
+	abjad.attach(markup, abjad.select.leaf(tuplets, 0), direction=abjad.UP)
+	return tuplets
+
 def assign_clefs(container: abjad.Container, duration=(5, 4)):
 	CLEFs_RANGE = {
 		'treble^15': (127, 61),
 		'treble^8': (60, 33),
 		'treble': (32, -1),
 		'bass': (-2, -30),
-		'bass_8': (-31, -50),
-		'bass_15': (-51, -127),
+		'bass_8': (-31, -48),
+		'bass_15': (-47, -127),
 	}
 
 	def get_clef_from_pitch(pitch):
@@ -65,10 +381,10 @@ def assign_clefs(container: abjad.Container, duration=(5, 4)):
 
 
 def split_at_first_integer(s):
-    for i, char in enumerate(s):
-        if char.isdigit():
-            return s[:i], s[i:]
-    return s, ''
+	for i, char in enumerate(s):
+		if char.isdigit():
+			return s[:i], s[i:]
+	return s, ''
 
 def attach_interval_markup(note: abjad.Leaf, interval: Interval):
 	markup_freq = abjad.Markup(rf'\markup \teeny "FREQ: {interval.freq}Hz"')
@@ -87,6 +403,10 @@ def make_dummy_staff():
 
 def add_coding_markup(param: str, string, leaf, deactivate=True):
 	abjad.attach(abjad.Markup(rf'\markup "{param}{string}"'), leaf, tag=abjad.Tag(param.upper()), deactivate=deactivate)
+
+def add_markup(leaf, string: str, deactivate=True):
+	param = ''.join(filter(str.isalpha, string))
+	abjad.attach(abjad.Markup(rf'\markup "{string}"'), leaf, tag=abjad.Tag(param.upper()), deactivate=deactivate)
 
 
 def attach_ji_chord_markup(chord, container, n=0):
@@ -194,7 +514,11 @@ def persist_as_pdf(score, path, info):
 	preamble = engraving.make_preamble(path, info)
 	
 	lilypond_file = abjad.LilyPondFile([preamble, score])
+	print(f'BEGIN: persist as pdf {path.build_pdf}')
 	abjad.persist.as_pdf(lilypond_file, path.build_pdf)
+	print(f'END: persisted as pdf {path.build_pdf}')
+
+
 
 def add_jitter_metronome(container, duration=(1, 4), probability=.95, bpm_range=(40, 120), minimum_duration=5/4):
 		dur = 0
@@ -299,7 +623,7 @@ def validate_frequency_match(freq: float, written_pitch: abjad.NamedPitch, thres
 def set_short_instrument_name(name):
 	if '_' in name:
 		parts = name.split('_')
-		return f'{parts[0][:2]}_{parts[1]}'
+		return f'{parts[0][:2]}_{parts[1][:3]}'
 	else:
 		return name[:2]
 	
@@ -429,7 +753,7 @@ def set_pitch_and_markup(this_pitch, ties, transpose=0, log=False):
 	if ji_ratio != 1:
 		#markup_ratio = abjad.Markup(rf'\markup \teeny \bold \fraction {ji_ratio.numerator} {ji_ratio.denominator}')
 		markup_ratio = abjad.Markup(
-   			rf'\markup \teeny \concat {{ \bold \fraction {ji_ratio.numerator} {ji_ratio.denominator} \hspace #0.15 "{origin_pitch.pitch_class.name}" }}',
+			rf'\markup \teeny \concat {{ \bold \fraction {ji_ratio.numerator} {ji_ratio.denominator} \hspace #0.15 "{origin_pitch.pitch_class.name}" }}',
 		)
 		markup_freq = abjad.Markup(rf'\markup \teeny "FREQ: {freq}Hz"')
 		markup_pitch_freq = abjad.Markup(rf'\markup \teeny "REAL FREQ: {round(abjad.NamedPitch.from_hertz(freq).hertz, 2)}"')
@@ -470,7 +794,23 @@ class MetricStaff:
 		staff.name = staff_name
 
 		voice = abjad.Voice()
-		voice.extend(create_talea([-1], 8, self.time_signatures, rewrite=False))
+		
+		"""
+		---tryied to use repeat---
+
+		total_duration = sum(abjad.Duration(_) for _ in self.time_signatures)
+		count = total_duration // 8
+		repeat = abjad.Repeat(repeat_type="unfold", repeat_count=count)
+		container = abjad.Rest('r8')
+		abjad.attach(repeat, container)
+		print(container)
+		voice.extend(repeat) """
+		rest_value = 8
+		total_duration = sum(time_sig.numerator * 1 / time_sig.denominator * rest_value for time_sig in self.time_signatures)
+		count = int(total_duration)
+		voice.extend([abjad.Rest('r8') for _ in range(count)])
+
+		#voice.extend(create_talea([-1], 8, self.time_signatures, rewrite=False))
 		self.create_time_signatures(voice)
 
 		metronome_mark = abjad.MetronomeMark(

@@ -53,9 +53,13 @@ class CsoundScoreBuilder:
 				i_line = [';', f'"{comment_name}"', onset_comment, dur_comment, DYNs_amp[find_nearest(dyn, DYNs_amp)], 'envelope', e.pitch]
 				i_score_lines.append(' '.join(map(lambda x: f'{x:<25}', map(str, i_line))))
 
-				for ch in range(1, e.channels + 1):
+				if hasattr(e, 'channel'):
 					i_statement = ['i', f'"{e.name}"', onset, dur, dyn, e.env, e.freq]
-					i_score_lines.append(' '.join(map(lambda x: f'{x:<25}', map(str, i_statement + [f'{ch+(index_staff/1000)}']))))
+					i_score_lines.append(' '.join(map(lambda x: f'{x:<25}', map(str, i_statement + [f'{e.channel+(index_staff/1000)}']))))
+				else:
+					for ch in range(1, e.channels + 1):
+						i_statement = ['i', f'"{e.name}"', onset, dur, dyn, e.env, e.freq]
+						i_score_lines.append(' '.join(map(lambda x: f'{x:<25}', map(str, i_statement + [f'{ch+(index_staff/1000)}']))))
 
 			i_statements_dict[f'{index_staff:02}-{instrument_name}'] = i_score_lines
 

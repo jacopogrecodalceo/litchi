@@ -25,39 +25,57 @@ CHROMATIC_PITCH_CLASS_NUMs = {num: [] for num in range(13)}
 
 @dataclass
 class Interval:
-	value: float
-	denominator_limit: int
-	
-	name: str | None = field(init=False, default=None)
-	cents: str | None = field(init=False, default=None)
+    value: float
+    denominator_limit: int
 
-	tolerance: int = 6
+    name: str | None = field(init=False, default=None)
+    cents: str | None = field(init=False, default=None)
 
-	def process(self):
-		log_value = Decimal(math.log10(float(self.value)))
-		self.abs_cents = log_value * EDO12_LOG2
-		self.semitones = self.abs_cents / 100
-		self.assign_interval_name()
+    tolerance: int = 6
 
-	def assign_interval_name(self):
-		self.ratio = Fraction(float(self.value)).limit_denominator(int(self.denominator_limit))
+    def process(self):
+        log_value = Decimal(math.log10(float(self.value)))
+        self.abs_cents = log_value * EDO12_LOG2
+        self.semitones = self.abs_cents / 100
+        self.assign_interval_name()
 
-		for name, v in INTERVAL_NAMEs.items():
-			if str(v['ratio']) == (str(self.ratio) if self.ratio != 1 else '1/1'):
-				self.name = name
-				self.interval_name_ratio = str(v['ratio'])
-				return
+    def assign_interval_name(self):
+        self.ratio = Fraction(float(self.value)).limit_denominator(int(self.denominator_limit))
 
-		while not self.name and self.tolerance > 1:
-			tolerance_value = Decimal(1) / (Decimal(10) ** self.tolerance)
+        for name, v in INTERVAL_NAMEs.items():
+            if str(v['ratio']) == (str(self.ratio) if self.ratio != 1 else '1/1'):
+                self.name = name
+                self.interval_name_ratio = str(v['ratio'])
+                return
 
-			for name, v in INTERVAL_NAMEs.items():
-				if abs(Fraction(v['ratio']) - self.ratio) < tolerance_value:
-					self.name = name
-					self.interval_name_ratio = str(v['ratio'])
-					return
+        while not self.name and self.tolerance > 1:
+            tolerance_value = Decimal(1) / (Decimal(10) ** self.tolerance)
 
-			self.tolerance -= 1
+            for name, v in INTERVAL_NAMEs.items():
+                if abs(Fraction(v['ratio']) - self.ratio) < tolerance_value:
+                    self.name = name
+                    self.interval_name_ratio = str(v['ratio'])
+                    return
+
+            self.tolerance -= 1
+
+    def __repr__(self):
+        attributes = {
+            "value": self.value,
+            "denominator_limit": self.denominator_limit,
+            "name": self.name,
+            "cents": self.cents,
+            "tolerance": self.tolerance,
+            "abs_cents": getattr(self, 'abs_cents', None),
+            "semitones": getattr(self, 'semitones', None),
+            "ratio": getattr(self, 'ratio', None),
+            "interval_name_ratio": getattr(self, 'interval_name_ratio', None)
+        }
+
+        attr_strings = [f"    {name:<20} = {value}" for name, value in attributes.items()]
+        attr_strings_str = ",\n".join(attr_strings)
+
+        return f"Interval(\n{attr_strings_str}\n)"
 
 @dataclass
 class Scala:
@@ -75,10 +93,11 @@ class Scala:
 
 	def __post_init__(self):
 		if isinstance(self.origin_value, str) and self.origin_value[0].isalpha():
-			self.origin_named_pitch = abjad.NamedPitch(self.origin_value)
-			self.origin_decimal_value = self.origin_named_pitch.hertz
+			#self.origin_numbered_pitch = abjad.NamedPitch(self.origin_value)
+			self.origin_numbered_pitch = abjad.NumberedPitch(self.origin_value)
+			self.origin_decimal_value = self.origin_numbered_pitch.hertz
 		elif isinstance(self.origin_value, (int, float)):
-			self.origin_named_pitch = abjad.NamedPitch.from_hertz(self.origin_value)
+			self.origin_numbered_pitch = abjad.NumberedPitch.from_hertz(self.origin_value)			
 			self.origin_decimal_value = self.origin_value
 
 
@@ -86,6 +105,14 @@ class Scala:
 		"""Generates an equal division of the octave (EDO) scale."""
 		self.values = [Decimal(2) ** (Decimal(step) / Decimal(n)) for step in range(n)]
 		self.name = f'edo{n}'
+		print(f'Calculating edo{n}..')
+		return self.values
+	
+	def edolin(self, n: int):
+		"""Generates a linear division of the octave (EDO) scale."""
+		self.values = [Decimal(1) + (Decimal(step) / Decimal(n)) for step in range(n)]
+		self.name = f'harm{n}-edolin'
+		print(f'Calculating harmonic{n}..')
 		return self.values
 	
 	def evoke(self, scala_name: str):
@@ -136,7 +163,7 @@ class Scala:
 			interval.process()
 
 			decimal_part, integer_part = math.modf(float(interval.semitones))
-			pitch = self.origin_named_pitch.number + int(integer_part)
+			pitch = self.origin_numbered_pitch.number + int(integer_part)
 			cents_from_written_pitch = round(decimal_part * 100)
 
 			if abs(cents_from_written_pitch) > 50:
@@ -216,6 +243,12 @@ class Scala:
 	def get_interval(self, string: str, transpose=0, print_modulo=True):
 
 		def split_string_from_number(string):
+			"""
+			This will get a string in a lilypond format, but the last number will always be
+			the chosen interval in the temperament.
+			e.g.
+			a'40 - it means a', duration 1/4, first a in scala
+			"""
 			# Use regex to find the first occurrence of a number
 			match = re.search(r'(\d+)', string)
 			if match:
@@ -226,17 +259,17 @@ class Scala:
 				# If no number is found, return the original text as a single element
 				return [string, 0]
 
-		lilypond_pitch_string, choosen_value = split_string_from_number(string)
-		choosen_pitch = abjad.NamedPitch(lilypond_pitch_string).transpose(transpose)
+		lilypond_pitch_string, selected_interval_number = split_string_from_number(string)
+		selected_pitch = abjad.NumberedPitch(lilypond_pitch_string).transpose(transpose)
+		
+		length_interval_numbers = len(self.chromatic_intervals[selected_pitch.pitch_class.number])
+		selected_inverval = self.chromatic_intervals[selected_pitch.pitch_class.number][selected_interval_number%length_interval_numbers]
 
-		length_values = len(self.chromatic_intervals[choosen_pitch.pitch_class.number])
-		choosen_interval = self.chromatic_intervals[choosen_pitch.pitch_class.number][choosen_value%length_values]
-
-		if choosen_value > length_values and print_modulo:
+		if selected_interval_number > length_interval_numbers and print_modulo:
 			print('NO VALUE, MODULO ENABLED!')
 
-		choosen_interval.pitch = choosen_pitch
-		choosen_interval.freq = Decimal(self.origin_decimal_value) * Decimal(choosen_interval.value)
+		selected_inverval.pitch = selected_pitch
+		selected_inverval.freq = Decimal(self.origin_decimal_value) * Decimal(selected_inverval.value)
 		
 		""" print(
 			choosen_interval.pitch,
@@ -246,23 +279,35 @@ class Scala:
 			)
 		) """
 
-		choosen_pitch_octave = choosen_pitch.octave.number - self.origin_named_pitch.octave.number
-		""" if choosen_pitch.pitch_class < self.origin_named_pitch.pitch_class:
-			choosen_pitch_octave = choosen_pitch_octave - 1 # No shift
-		else:
-			choosen_pitch_octave = choosen_pitch_octave  # Shift for A-based origin """
-		factor = 2 ** choosen_pitch_octave
-		choosen_interval.freq *= Decimal(factor)
-		assert abs(Decimal(choosen_pitch.hertz) - choosen_interval.freq) < min([choosen_interval.freq, choosen_pitch.hertz]), f'{choosen_interval.freq = }, {choosen_pitch.hertz = }'
+		octave_diff = selected_pitch.octave.number - self.origin_numbered_pitch.octave.number
+		
+		factor = Decimal(2) ** Decimal(octave_diff)
+		selected_inverval.freq *= factor
 
-		return choosen_interval
+
+		difference = abs(Decimal(selected_pitch.hertz) - selected_inverval.freq)
+		threshold = min(selected_inverval.freq, selected_pitch.hertz)
+
+		if difference >= threshold:
+			print(f"Warning: Frequency difference exceeds threshold:")
+			print(f"Difference: {difference}")
+			print(f"Threshold: {threshold}")
+			print(f"{selected_inverval.freq=}")
+			print(f"{selected_pitch.hertz=}")
+			print(f"Selected interval: {selected_inverval}")
+			response = input("Continue anyway? (y/n): ").lower().strip()
+			if response != 'y':
+				print("Aborting execution")
+				exit(1)
+
+		return selected_inverval
 
 	def __repr__(self):
 		# Define the attributes to include in the representation
 		attributes = {
 			"name": self.name,
 			"origin_value": self.origin_value,
-			"origin_named_pitch": self.origin_named_pitch.name,
+			"origin_numbered_pitch": self.origin_numbered_pitch.name,
 			"denominator_limit": self.denominator_limit,
 			"tolerance": self.tolerance,
 		}
